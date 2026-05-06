@@ -1,0 +1,86 @@
+# conf/cleaning/beneficiaries.yaml
+# Cleaning rules for the CMS beneficiary summary table.
+# Used by Approach A (strategy registry).
+#
+# For each variable, assign one of the built-in strategies:
+#   mode            - most frequent non-null value
+#   min             - smallest non-null value
+#   max             - largest non-null value
+#   most_recent     - last non-null value (arrays must be time-ordered upstream)
+#   prefer_nonmissing - first non-null value; falls back to mode if all missing
+#   ever_nonzero    - 1 if any value is nonzero/non-null, else 0
+#   require_stable  - keeps value if n_distinct == 1, else nulls it out
+#
+# Use sql: for one-off expressions that the registry cannot express cleanly.
+
+table: beneficiaries
+primary_key:
+  - bene_id
+
+# Columns not listed here will be caught by the schema coverage check at runtime.
+# Set default_strategy to a fallback, or leave null to require explicit coverage.
+default_strategy: null
+
+variables:
+
+  # --- Demographics ---
+  bene_dob:
+    strategy: min                 # date of birth should be stable; take earliest non-null
+
+  sex_cd:
+    strategy: prefer_nonmissing
+    missing_codes: [0]            # 0 = unknown; treat as missing when preferring
+
+  race_cd:
+    strategy: mode                # take most common recorded value across years
+
+  bene_zip:
+    strategy: most_recent         # address can change; take latest known
+
+  state_cd:
+    strategy: most_recent
+
+  county_cd:
+    strategy: most_recent
+
+  # --- Enrollment / eligibility ---
+  dual_elgbl_cd:
+    strategy: ever_nonzero        # ever dually eligible = 1
+
+  hmo_ind:
+    strategy: mode                # take most frequently recorded HMO status
+
+  entlmt_rsn_curr:
+    strategy: most_recent         # entitlement reason: take most recent
+
+  # --- Death ---
+  death_dt:
+    strategy: min                 # take earliest recorded death date if any disagreement
+
+  # --- Example of sql: escape hatch ---
+  # elgblty_grp_cd:
+  #   sql: >
+  #     list_mode(list_filter(elgblty_grp_cd, x -> x IS NOT NULL AND x NOT IN (0, 99)))
+
+# ------------------------------------------------------------------
+# Cleaning rules: explicit responses to problems identified upstream
+# ------------------------------------------------------------------
+cleaning_rules:
+
+  # Across-year consistency checks and handling
+  across_years:
+    sex_cd:
+      action: prefer_nonmissing   # if sex changes across years, prefer a non-missing code
+      missing_codes: [0]
+    race_cd:
+      action: mode                # if race changes across years, take modal value
+    hmo_ind:
+      action: mode
+
+  # Across-column logical checks (within a resolved row)
+  across_columns:
+    death_after_dob:
+      rule: date_order
+      earlier: bene_dob
+      later: death_dt
+      on_violation: null_later    # null out death_dt if it precedes bene_dob

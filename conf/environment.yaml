@@ -1,0 +1,15 @@
+name: clean-cms
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - duckdb>=0.10.0
+      - hydra-core>=1.3.0
+      - omegaconf>=2.3.0
+      - pyyaml>=6.0
+      - pyarrow>=14.0       # for parquet I/O
+      - pandas>=2.0         # for test assertions
+      - pytest>=7.0
