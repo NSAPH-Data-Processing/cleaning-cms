@@ -17,8 +17,8 @@ from pathlib import Path
 import hydra
 from omegaconf import DictConfig
 
-from src.clean_cms.cleaner import clean_table, load_cleaning_config
-from src.clean_cms.utils import setup_logging, build_input_filename, build_output_filename
+from src.cleaner import clean_table, load_cleaning_config
+from src.utils import setup_logging, build_input_filename, build_output_filename
 
 logger = logging.getLogger(__name__)
 
