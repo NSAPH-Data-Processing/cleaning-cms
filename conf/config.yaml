@@ -1,0 +1,24 @@
+# conf/config.yaml
+# Hydra runner config for clean-cms
+# Controls input/output paths and which table/years to clean.
+
+defaults:
+  - cleaning: beneficiaries   # loads conf/cleaning/beneficiaries.yaml
+  - _self_
+
+# --- I/O ---
+input_dir: data/normalized        # directory containing _array.parquet files
+output_dir: data/cleaned          # directory to write _clean.parquet files
+
+# --- Table selection ---
+table: beneficiaries              # which table to clean (must match a cleaning config)
+year_min: 2008
+year_max: 2010
+
+# --- Derived filenames (do not edit; used by runner) ---
+# input:  {input_dir}/{table}_{year_min}_{year_max}_array.parquet
+# output: {output_dir}/{table}_{year_min}_{year_max}_clean.parquet
+
+# --- Runtime options ---
+dry_run: false        # if true, print generated SQL but do not write output
+log_level: INFO
