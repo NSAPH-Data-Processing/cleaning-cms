@@ -34,6 +34,83 @@ def is_array_type(dtype: str) -> bool:
     return "[]" in dtype_upper or dtype_upper.startswith("LIST")
 
 
+def resolve_table(
+    input_path: str | Path,
+    output_path: str | Path,
+    cleaning_config: dict,
+    dry_run: bool = False,
+) -> None:
+    """
+    Stage 1: resolve array columns to scalar values.
+
+    Applies array-resolution strategies and across-years rules only.
+    Across-columns rules are NOT applied here — that is Stage 2.
+    """
+    input_path = Path(input_path)
+
+    primary_key      = cleaning_config["primary_key"]
+    variables_conf   = cleaning_config.get("variables", {})
+    default_strategy = cleaning_config.get("default_strategy")
+    across_years_conf = cleaning_config.get("cleaning_rules", {}).get("across_years", {})
+
+    con = duckdb.connect()
+    schema = executor.load_source(con, input_path)
+    con.close()
+
+    utils.check_schema_coverage(schema, primary_key, variables_conf, default_strategy)
+
+    resolved = resolver.resolve_all(
+        schema=schema,
+        primary_key=primary_key,
+        variables_conf=variables_conf,
+        across_years_conf=across_years_conf,
+        default_strategy=default_strategy,
+    )
+
+    passthrough = query_builder.get_passthrough_cols(schema, primary_key, is_array_type)
+
+    sql = query_builder.build_resolution_select(
+        table_name="source",
+        primary_key=primary_key,
+        resolved_expressions=resolved,
+        passthrough_cols=passthrough,
+    )
+
+    executor.run(input_path=input_path, output_path=output_path, sql=sql, dry_run=dry_run)
+
+
+def apply_rules(
+    input_path: str | Path,
+    output_path: str | Path,
+    cleaning_config: dict,
+    dry_run: bool = False,
+) -> None:
+    """
+    Stage 2: apply across-columns rules to the already-flat input.
+
+    Works on both array-resolved intermediate files and flat-mode direct inputs.
+    Wraps SELECT * FROM source with a REPLACE clause for each rule rewrite.
+    """
+    across_cols_conf = cleaning_config.get("cleaning_rules", {}).get("across_columns", {})
+    base_sql = "SELECT * FROM source"
+    sql = query_builder.wrap_across_columns(base_sql, across_cols_conf)
+
+    executor.run(input_path=input_path, output_path=output_path, sql=sql, dry_run=dry_run)
+
+
+def apply_entity_checks(
+    input_path: str | Path,
+    output_path: str | Path,
+    cleaning_config: dict,
+    dry_run: bool = False,
+) -> None:
+    """
+    Stage 3: entity-level consistency checks (passthrough pending implementation).
+    """
+    sql = "SELECT * FROM source"
+    executor.run(input_path=input_path, output_path=output_path, sql=sql, dry_run=dry_run)
+
+
 def clean_table(
     input_path: str | Path,
     output_path: str | Path,

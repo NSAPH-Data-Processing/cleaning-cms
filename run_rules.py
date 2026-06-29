@@ -5,7 +5,12 @@ import hydra
 from omegaconf import DictConfig
 
 from src.cleaner import apply_rules
-from src.utils import setup_logging, load_run_context
+from src.utils import (
+    setup_logging,
+    load_run_context,
+    build_flat_input_filename,
+    build_intermediate_filename,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +21,30 @@ def main(cfg: DictConfig) -> None:
     ctx = load_run_context(cfg)
 
     table, year_min, year_max = ctx["table"], ctx["year_min"], ctx["year_max"]
-    input_path = Path(cfg.intermediate_dir) / f"{table}_{year_min}_{year_max}_resolved.parquet"
-    output_path = Path(cfg.intermediate_dir) / f"{table}_{year_min}_{year_max}_rules.parquet"
+    sharded = ctx["sharded"]
+    mode = ctx["cleaning_config"].get("mode", "array")
+
+    if mode == "array":
+        input_path = Path(cfg.intermediate_dir) / build_intermediate_filename(
+            table, year_min, year_max, sharded, "resolved"
+        )
+    else:
+        input_path = Path(cfg.input_dir) / build_flat_input_filename(
+            table, year_min, year_max, sharded
+        )
+
+    output_path = Path(cfg.intermediate_dir) / build_intermediate_filename(
+        table, year_min, year_max, sharded, "rules"
+    )
 
     if not input_path.exists():
-        raise FileNotFoundError(f"Resolved file not found: {input_path}")
+        raise FileNotFoundError(f"Input file not found: {input_path}")
 
     logger.info("run_rules starting")
     logger.info("  table   : %s", table)
     logger.info("  years   : %s - %s", year_min, year_max)
+    logger.info("  sharded : %s", sharded)
+    logger.info("  mode    : %s", mode)
     logger.info("  input   : %s", input_path)
     logger.info("  output  : %s", output_path)
     logger.info("  dry_run : %s", ctx["dry_run"])

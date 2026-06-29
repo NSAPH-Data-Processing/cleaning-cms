@@ -8,6 +8,7 @@ defaults:
 
 # --- I/O ---
 input_dir: data/normalized        # directory containing _array.parquet files
+intermediate_dir: data/intermediate  # directory for resolved and rules parquet files
 output_dir: data/cleaned          # directory to write _clean.parquet files
 
 # --- Table selection ---
@@ -15,9 +16,16 @@ table: beneficiaries              # which table to clean (must match a cleaning 
 year_min: 2008
 year_max: 2010
 
-# --- Derived filenames (do not edit; used by runner) ---
-# input:  {input_dir}/{table}_{year_min}_{year_max}_array.parquet
-# output: {output_dir}/{table}_{year_min}_{year_max}_clean.parquet
+# --- Sharding ---
+# Set to true when the previous step produced one file per year
+# (e.g. {table}_{year}_array.parquet) rather than a single combined file
+# (e.g. {table}_{year_min}_{year_max}_array.parquet).
+# Output will match: sharded input → sharded output, combined → combined.
+sharded: false
+
+# --- Derived filenames (informational; controlled by runner) ---
+# sharded=false: {input_dir}/{table}_{year_min}_{year_max}_array.parquet  → ... → {output_dir}/{table}_{year_min}_{year_max}_clean.parquet
+# sharded=true:  {input_dir}/{table}_{year}_array.parquet (per year)      → ... → {output_dir}/{table}_{year}_clean.parquet (per year)
 
 # --- Runtime options ---
 dry_run: false        # if true, print generated SQL but do not write output
