@@ -1,0 +1,110 @@
+# conf/cleaning/enrollments.yaml
+#
+# Case: SHARDED (by year) + AGGREGATED
+#
+# Dataset: medicare_mbsf (not medicaid_max-taf — this table's schema is unrelated to the
+# medicaid_max-taf "enrollments" table this file previously described; conf/cleaning/{table}.yaml
+# is keyed only by table name, with no dataset namespace, so the two can't coexist here).
+#
+# build_tables input:  enrollments_2000_array.parquet  (one per year)
+# cleaning-cms output: enrollments_2000_clean.parquet  (one per year, written to output_dir)
+#
+# Columns: bene_id, year, zip, state, county, hmo_01..12, hmo_cvg_count, buyin_01..12,
+# buyin_cvg_count, dual_01..12, dual_mo, orec, curec. normalization-cms's
+# conf/table_config/medicare_mbsf/enrollments.yaml doesn't exist in this checkout yet to verify
+# against — this list was supplied directly; re-check against that config once it's added.
+#
+# All variables use strategy: mode (most frequent non-null value) rather than field-specific
+# strategies (most_recent/prefer_nonmissing/require_stable) — a deliberate simplification, not
+# the per-column judgment calls the earlier draft of this file made.
+
+table: enrollments
+mode: array
+
+# Shard values this table is split into upstream (build_tables.py shard_by: year,
+# year_min/year_max 2000-2001 in normalization-cms/conf/build_tables/medicare_mbsf.yaml).
+# Keep in sync with that config.
+shards: [2000, 2001]
+
+# Matches medicare_mbsf.yaml's build_tables primary_key for enrollments (bene_id, year only —
+# no state, unlike medicaid_max-taf's enrollments primary_key which this file used to declare).
+primary_key:
+  - bene_id
+  - year
+
+# Columns not listed below will be caught by the schema coverage check at runtime.
+default_strategy: null
+
+variables:
+
+  # --- Geography ---
+  zip:
+    strategy: mode
+
+  state:
+    strategy: mode
+
+  county:
+    strategy: mode
+
+  # --- Monthly HMO enrollment indicator ---
+  hmo_01: {strategy: mode}
+  hmo_02: {strategy: mode}
+  hmo_03: {strategy: mode}
+  hmo_04: {strategy: mode}
+  hmo_05: {strategy: mode}
+  hmo_06: {strategy: mode}
+  hmo_07: {strategy: mode}
+  hmo_08: {strategy: mode}
+  hmo_09: {strategy: mode}
+  hmo_10: {strategy: mode}
+  hmo_11: {strategy: mode}
+  hmo_12: {strategy: mode}
+
+  hmo_cvg_count:
+    strategy: mode
+
+  # --- Monthly Part A/B buy-in indicator ---
+  buyin_01: {strategy: mode}
+  buyin_02: {strategy: mode}
+  buyin_03: {strategy: mode}
+  buyin_04: {strategy: mode}
+  buyin_05: {strategy: mode}
+  buyin_06: {strategy: mode}
+  buyin_07: {strategy: mode}
+  buyin_08: {strategy: mode}
+  buyin_09: {strategy: mode}
+  buyin_10: {strategy: mode}
+  buyin_11: {strategy: mode}
+  buyin_12: {strategy: mode}
+
+  buyin_cvg_count:
+    strategy: mode
+
+  # --- Monthly dual-eligibility status code ---
+  dual_01: {strategy: mode}
+  dual_02: {strategy: mode}
+  dual_03: {strategy: mode}
+  dual_04: {strategy: mode}
+  dual_05: {strategy: mode}
+  dual_06: {strategy: mode}
+  dual_07: {strategy: mode}
+  dual_08: {strategy: mode}
+  dual_09: {strategy: mode}
+  dual_10: {strategy: mode}
+  dual_11: {strategy: mode}
+  dual_12: {strategy: mode}
+
+  dual_mo:
+    strategy: mode
+
+  # --- Entitlement reason ---
+  orec:
+    strategy: mode
+
+  curec:
+    strategy: mode
+
+cleaning_rules:
+  across_years: {}
+  across_columns: {}
