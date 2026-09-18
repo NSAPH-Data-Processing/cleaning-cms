@@ -3,21 +3,18 @@
 # Controls input/output paths and which table/years to clean.
 
 defaults:
-  - cleaning: beneficiaries   # loads conf/cleaning/beneficiaries.yaml
+  - datapaths: medicare_mbsf
   - _self_
 
-# --- I/O ---
-input_dir: data/normalized        # directory containing _array.parquet files
-output_dir: data/cleaned          # directory to write _clean.parquet files
+# I/O directories (data/{datapaths.name}/{input,intermediate,cleaned}) are derived from
+# datapaths.name in cleancms.utils.build_stage_dirs / the Snakefile — not repeated here.
 
 # --- Table selection ---
-table: beneficiaries              # which table to clean (must match a cleaning config)
-year_min: 2008
-year_max: 2010
-
-# --- Derived filenames (do not edit; used by runner) ---
-# input:  {input_dir}/{table}_{year_min}_{year_max}_array.parquet
-# output: {output_dir}/{table}_{year_min}_{year_max}_clean.parquet
+dataset: medicare_mbsf        # dataset namespace under conf/cleaning/{dataset}/{table}.yaml
+table: enrollments            # which table to clean (must match a cleaning config)
+year_min: 2000
+year_max: 2001
+shard: null                       # set to a shard value (e.g. "CA") to process a single shard
 
 # --- Runtime options ---
 dry_run: false        # if true, print generated SQL but do not write output
